@@ -39,22 +39,24 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const menuItems = {
     admin: [
-      { icon: Layout, label: 'Dashboard', path: '/dashboard' },
+      { icon: Layout, label: 'Dashboard', path: '/admin-dashboard' },
       { icon: Users, label: 'Users', path: '/users' },
       { icon: Activity, label: 'Analytics', path: '/analytics' },
       { icon: Settings, label: 'Settings', path: '/settings' },
     ],
     provider: [
-      { icon: Layout, label: 'Dashboard', path: '/dashboard' },
+      { icon: Layout, label: 'Dashboard', path: '/provider-dashboard' },
       { icon: Users, label: 'Patients', path: '/patients' },
       { icon: Calendar, label: 'Appointments', path: '/provider-appointments' },
       { icon: FileText, label: 'Reports', path: '/reports' },
+      { icon: Settings, label: 'Settings', path: '/settings' },
     ],
     mother: [
-      { icon: Home, label: 'Home', path: '/dashboard' },
+      { icon: Home, label: 'Home', path: '/mother-dashboard' },
       { icon: Activity, label: 'Health Metrics', path: '/metrics' },
       { icon: Calendar, label: 'Appointments', path: '/appointments' },
       { icon: FileText, label: 'Records', path: '/records' },
+      { icon: Settings, label: 'Settings', path: '/settings' },
     ],
   };
 

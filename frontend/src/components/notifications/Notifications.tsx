@@ -3,7 +3,6 @@ import { Calendar, FileText, Bell } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { formatDate } from '../../lib/utils';
 
-
 export function Notifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -11,6 +10,7 @@ export function Notifications() {
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userId = user.id;
+  const userRole = user.role;  // ✅ get user role too
 
   const iconMap: Record<string, React.ElementType> = {
     appointment: Calendar,
@@ -26,8 +26,8 @@ export function Notifications() {
       const res = await fetch(`http://localhost:8000/api/notifications/?user_id=${userId}`);
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const json = await res.json();
-      // assume backend returns { data: [...] }
-      setNotifications(Array.isArray(json.data) ? json.data : []);
+      console.log(json.notifications);
+      setNotifications(Array.isArray(json.notifications) ? json.notifications : []);
     } catch (err) {
       console.error('Error fetching notifications:', err);
       setError('Failed to load notifications');
@@ -69,7 +69,16 @@ export function Notifications() {
                         {formatDate(new Date(note.timestamp))}
                       </span>
                     </div>
-                    {note.details && (
+
+                    {/* ✅ Show name only if role is provider or admin */}
+                    {['provider', 'admin'].includes(userRole) && note.name && (
+                      <p className="mt-1 text-sm text-gray-700">
+                        <span className="font-medium">User:</span> {note.name}
+                      </p>
+                    )}
+
+                    {/* ✅ Show details if present */}
+                    {note.details && Object.keys(note.details).length > 0 && (
                       <div className="mt-2 text-sm text-gray-600">
                         {Object.entries(note.details).map(([key, val]) => (
                           <div key={key}>

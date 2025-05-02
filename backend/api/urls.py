@@ -37,4 +37,7 @@ urlpatterns = [
     path('patient-reports/',patient_reports,name="patient-reports"),
     path('admin-stats/',admin_stats,name="admin-stats"),
     path('admin-analytics/',admin_analytics,name="admin-analytics"),
+    path('notifications/',get_notifications,name="notifications"),
+    path('profile/',profile,name="profile"),
+    path('change-password/',change_password,name="change-password"),
 ]

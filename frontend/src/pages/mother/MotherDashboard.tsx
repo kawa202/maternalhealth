@@ -19,9 +19,7 @@ const colorMap = {
 
 export function MotherDashboard() {
   const { setMetrics, metrics } = useHealthStore();
-  const [latest, setLatest] = useState<{heartrate?: string; blood_pressure?: string; glucose?: string; temperature?: string;}>(
-    {}
-  );
+  const [latest, setLatest] = useState<{ heartrate?: string; blood_pressure?: string; glucose?: string; temperature?: string; }>({});
   const [appointments, setAppointments] = useState<any[]>([]);
   const [userId, setUserId] = useState<number | null>(null);
 
@@ -55,6 +53,7 @@ export function MotherDashboard() {
             temp: item.body_temp,
           })));
         }
+
         // set latest for stats cards
         if (data.latest) {
           setLatest(data.latest);
@@ -69,6 +68,7 @@ export function MotherDashboard() {
       try {
         const res = await fetch(`http://localhost:8000/api/patient-appointments/?user_id=${userId}`);
         const json = await res.json();
+        console.log(json.data);
         setAppointments(Array.isArray(json.data) ? json.data : []);
       } catch (err) {
         console.error('Failed to fetch appointments:', err);
@@ -88,10 +88,12 @@ export function MotherDashboard() {
     { type: 'temperature', label: 'Temperature', value: latest.temperature ? `${latest.temperature} °C` : 'N/A' },
   ];
 
+  // Filter future appointments and pick top 3
   const upcomingAppointments = Array.isArray(appointments)
     ? [...appointments]
+        .filter(appt => new Date(appt.date) >= new Date())
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .slice(0, 1)
+        .slice(0, 3)
     : [];
 
   return (
@@ -123,19 +125,23 @@ export function MotherDashboard() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <HealthMetricsChart />
         <div className="rounded-lg bg-white p-6 shadow-md">
-          <h3 className="mb-4 text-lg font-semibold text-gray-900">Upcoming Appointment</h3>
+          <h3 className="mb-4 text-lg font-semibold text-gray-900">Upcoming Appointments</h3>
           {upcomingAppointments.length > 0 ? (
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Next Checkup</p>
-                <p className="mt-1 text-lg font-medium">
-                  {format(new Date(upcomingAppointments[0].date), 'MMMM d, yyyy - h:mm a')}
-                </p>
-              </div>
-              <Calendar className="h-8 w-8 text-primary" />
+            <div className="space-y-4">
+              {upcomingAppointments.map((appt, idx) => (
+                <div key={idx} className="flex items-center justify-between border-b pb-2">
+                  <div>
+                    <p className="text-sm text-gray-600">Checkup</p>
+                    <p className="mt-1 text-lg font-medium">
+                      {format(new Date(appt.date), 'MMMM d, yyyy - h:mm a')}
+                    </p>
+                  </div>
+                  <Calendar className="h-8 w-8 text-primary" />
+                </div>
+              ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-sm">No upcoming appointment</p>
+            <p className="text-gray-500 text-sm">No upcoming appointments</p>
           )}
         </div>
       </div>

@@ -17,6 +17,7 @@ export function AdminDashboard() {
     fetch('http://localhost:8000/api/admin-stats')  // Replace with your actual endpoint
       .then((res) => res.json())
       .then((data) => {
+        console.log(data);
         setDashboardData(data);
         setLoading(false);
       })

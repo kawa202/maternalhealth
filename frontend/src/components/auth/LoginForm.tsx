@@ -3,11 +3,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '../ui/Button';
-import { LogIn } from 'lucide-react';
+import { LogIn, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  username: z.string().min(3, 'Username is required'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
@@ -15,6 +15,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const {
@@ -29,7 +30,6 @@ export function LoginForm() {
     try {
       setError(null);
 
-      // Send login data to Django backend
       const response = await fetch('http://localhost:8000/api/login/', {
         method: 'POST',
         headers: {
@@ -42,35 +42,25 @@ export function LoginForm() {
         throw new Error('Invalid credentials');
       }
 
-      // Parse the returned user data
       const user = await response.json();
-
       console.log(user);
-
       localStorage.clear();
-
-      // Store user in local storage
       localStorage.setItem('user', JSON.stringify(user));
 
-      // Redirect based on role or other criteria
       switch (user.role) {
         case 'mother':
-          console.log("mother");
-          navigate('/dashboard');
+          navigate('/mother-dashboard');
           break;
         case 'provider':
-          console.log("provider");
-          navigate('/dashboard');
+          navigate('/provider-dashboard');
           break;
         case 'admin':
-          console.log("admin");
-          navigate('/dashboard');
+          navigate('/admin-dashboard');
           break;
         default:
-          console.log("not found");
-          navigate('/dashboard'); // Fallback route
+          navigate('/');
       }
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message || 'An error occurred during login');
     }
   };
@@ -78,31 +68,43 @@ export function LoginForm() {
   return (
     <div className="registration-page">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+
+        {/* Username */}
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            Email
+          <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+            Username
           </label>
           <input
-            {...register('email')}
-            type="email"
+            {...register('username')}
+            type="text"
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            placeholder="Enter your email"
+            placeholder="Enter your username"
           />
-          {errors.email && (
-            <p className="mt-1 text-sm text-danger">{errors.email.message}</p>
+          {errors.username && (
+            <p className="mt-1 text-sm text-danger">{errors.username.message}</p>
           )}
         </div>
 
+        {/* Password */}
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-700">
             Password
           </label>
-          <input
-            {...register('password')}
-            type="password"
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            placeholder="Enter your password"
-          />
+          <div className="relative">
+            <input
+              {...register('password')}
+              type={showPassword ? 'text' : 'password'}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              placeholder="Enter your password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 focus:outline-none"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
           {errors.password && (
             <p className="mt-1 text-sm text-danger">{errors.password.message}</p>
           )}

@@ -72,8 +72,11 @@ class MedicalHistory(models.Model):
     
 class Notifications(models.Model):
     user = models.ForeignKey(User,related_name='notifications_received', on_delete=models.CASCADE)
-    provider = models.ForeignKey('auth.User',related_name='notifications_sent', on_delete=models.CASCADE,null=True,blank=True)
+    type = models.CharField( max_length=150, blank=True, null=True)
     message = models.TextField()
+    read = models.CharField(max_length=50, default=False)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    details = models.JSONField(blank=True, null=True)
     
     def __str__(self):
         return self.user.email

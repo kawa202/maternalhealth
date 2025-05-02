@@ -47,6 +47,16 @@ function App() {
             <DashboardLayout>
               <AdminDashboard />
             </DashboardLayout>}/>
+          
+            <Route path="/provider-dashboard" element={
+            <DashboardLayout>
+              <ProviderDashboard />
+            </DashboardLayout>}/>
+
+            <Route path="/mother-dashboard" element={
+            <DashboardLayout>
+              <MotherDashboard />
+            </DashboardLayout>}/>
 
             <Route path="/analytics" element={
             <DashboardLayout>
@@ -59,134 +69,57 @@ function App() {
        
         
 
-        {/* Protected routes */}
-        <Route
-          path="/dashboard"
-          element={
-            isAuthenticated ? (
-              
-              <DashboardLayout>
-                
-                {user && JSON.parse(user).role === 'admin' ? (
-                  
-                  <AdminDashboard />
-                ) : user && JSON.parse(user).role === 'provider' ? (
-                  <ProviderDashboard />
-                ) : user && JSON.parse(user).role === 'mother' ? (
-                  <MotherDashboard />
-                ) : (
-                  <Navigate to="/" replace />
-                )}
-              </DashboardLayout>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
+        
 
         
-        <Route path="/provider-dashboard" element={
-        <DashboardLayout>
-          <AdminDashboard />
-        </DashboardLayout>}/>
+        
         <Route path="/appointments" element={
         <DashboardLayout>
           <Appointments />
         </DashboardLayout>}/>
 
-        {/* Role-specific routes */}
-        <Route
-          path="/metrics"
-          element={
-            isAuthenticated && JSON.parse(user).role === 'mother' ? (
-              <DashboardLayout>
-                <HealthMetrics />
-              </DashboardLayout>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
+        <Route path="/metrics" element={
+        <DashboardLayout>
+          <HealthMetrics />
+        </DashboardLayout>}/>
+
+        
         <Route path="/provider-appointments" element={
           <DashboardLayout>
             <ProviderAppointments/>
           </DashboardLayout>}/>
-        <Route
-          path="/appointments"
-          element={
-            isAuthenticated && JSON.parse(user).role === 'mother' ? (
-              <DashboardLayout>
-                <Appointments />
-              </DashboardLayout>
-            ) : isAuthenticated && JSON.parse(user).role === 'provider' ? (
-              <DashboardLayout>
-                <ProviderAppointments />
-              </DashboardLayout>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
-        <Route
-          path="/records"
-          element={
-            isAuthenticated && JSON.parse(user).role === 'mother' ? (
-              <DashboardLayout>
-                <Records />
-              </DashboardLayout>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
-        <Route
-          path="/contacts"
-          element={
-            isAuthenticated && JSON.parse(user).role === 'mother' ? (
-              <DashboardLayout>
-                <EmergencyContacts />
-              </DashboardLayout>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
-        <Route
-          path="/patients"
-          element={
-            isAuthenticated && JSON.parse(user).role === 'provider' ? (
-              <DashboardLayout>
-                <Patients />
-              </DashboardLayout>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
-        <Route
-          path="/patients/:id"
-          element={
-            isAuthenticated && JSON.parse(user).role === 'provider' ? (
-              <DashboardLayout>
-                <PatientDetails />
-              </DashboardLayout>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
-        <Route
-          path="/reports"
-          element={
-            isAuthenticated && JSON.parse(user).role === 'provider' ? (
-              <DashboardLayout>
-                <Reports />
-              </DashboardLayout>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
+
+        <Route path="/appointments" element={
+          <DashboardLayout>
+            <Appointments />
+          </DashboardLayout>}/>
+
+        <Route path="/records" element={
+          <DashboardLayout>
+            <Records />
+          </DashboardLayout>}/>
+        
+        <Route path="/contacts" element={
+          <DashboardLayout>
+            <EmergencyContacts />
+          </DashboardLayout>}/>
+
+        <Route path="/patients" element={
+          <DashboardLayout>
+            <Patients />
+          </DashboardLayout>}/>
+
+        <Route path="/patients/:id" element={
+          <DashboardLayout>
+            <PatientDetails />
+          </DashboardLayout>}/>
+
+        <Route path="/reports" element={
+          <DashboardLayout>
+            <Reports />
+          </DashboardLayout>}/>
+        
+      
       </Routes>
     </Router>
   );

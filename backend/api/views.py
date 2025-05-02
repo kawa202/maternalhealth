@@ -33,12 +33,16 @@ scaler = joblib.load(os.path.join(models_folder, 'scaler.pkl'))
 @csrf_exempt
 def login(request):
     if request.method == "POST":
-        import json
+        
         data = json.loads(request.body)
-        email = data.get("email")
+        username = data.get("username")
         password = data.get("password")
         
-        user = authenticate(request, username=email, password=password)
+        print(username)
+        
+        user = authenticate(request, username=username, password=password)
+        
+        print("pass",user)
         
         if user is not None:
             #get user profile
@@ -97,6 +101,43 @@ def registration(request):
 
     return JsonResponse({'error': 'Only POST allowed'}, status=405)
 
+
+#View to check for abnormalities in the readings 
+def check_abnormal_readings(data):
+    alerts = {}
+
+    # Check Systolic BP
+    if data['systolicBP'] >= 130:
+        alerts['systolicBP'] = 'High'
+    elif data['systolicBP'] < 90:
+        alerts['systolicBP'] = 'Low'
+
+    # Check Diastolic BP
+    if data['diastolicBP'] >= 80:
+        alerts['diastolicBP'] = 'High'
+    elif data['diastolicBP'] < 60:
+        alerts['diastolicBP'] = 'Low'
+
+    # Check Blood Sugar (assuming mmol/L)
+    if data['bs'] > 7.8:
+        alerts['bs'] = 'High'
+    elif data['bs'] < 3.9:
+        alerts['bs'] = 'Low'
+
+    # Check Body Temperature 
+    if data['bodyTemp'] > 99.5:
+        alerts['bodyTemp'] = 'High'
+    elif data['bodyTemp'] < 97:
+        alerts['bodyTemp'] = 'Low'
+
+    # Check Heart Rate
+    if data['heartRate'] > 100:
+        alerts['heartRate'] = 'High'
+    elif data['heartRate'] < 60:
+        alerts['heartRate'] = 'Low'
+
+    return alerts
+
 @csrf_exempt
 def predict(request):
     print("submission")
@@ -141,7 +182,16 @@ def predict(request):
             predicted_risk = risk,
         )
         
+        abnormalities = check_abnormal_readings(data)
         
+        if abnormalities:
+            Notifications.objects.create(
+                user=user,
+                type='alert',
+                message=f'High risk complications detected: {", ".join(abnormalities.keys())}',
+                details=abnormalities, 
+            )
+                
         
         
         
@@ -833,6 +883,8 @@ def patient_appointments(request):
         .select_related('provider')
         .order_by('time')
     )
+    
+    print(qs)
 
     data = []
     for appt in qs:
@@ -850,6 +902,8 @@ def patient_appointments(request):
                 'name': f"{appt.provider.first_name} {appt.provider.last_name}",
             }
         })
+        
+    print(data)
 
     return JsonResponse({'data': data}, status=200)
 
@@ -907,11 +961,13 @@ def admin_stats(request):
 
     total_providers = Profile.objects.filter(role="provider").count()
 
-    appointment_trends = list(Appointments.objects.annotate(
-        period=TruncMonth('time')
-    ).values('period').annotate(
-        total=Count('id')
-    ).order_by('period'))
+    appointment_trends = list(
+        Appointments.objects
+        .annotate(period=TruncDate('time'))  # Group by DATE
+        .values('period')
+        .annotate(total=Count('id'))  # Count per date
+        .order_by('period')
+    )
 
     last_patient = Profile.objects.filter(role="mother").order_by('-id').first()
     last_provider = Profile.objects.filter(role="provider").order_by('-id').first()
@@ -1013,3 +1069,157 @@ def admin_analytics(request):
         "last_appointment": last_appointment_data,
         "risk_case_trends": risk_case_trends
     })
+
+#View to get notification
+@csrf_exempt
+@require_GET
+def get_notifications(request):
+    user_id = request.GET.get('user_id')
+
+    if not user_id:
+        return JsonResponse({'error': 'user_id is required'}, status=400)
+
+    try:
+        profile = Profile.objects.get(user__id=user_id)
+    except Profile.DoesNotExist:
+        return JsonResponse({'error': 'User profile not found'}, status=404)
+
+    # Role-based filtering
+    if profile.role == 'admin':
+        notifications = Notifications.objects.all().order_by('-created_at')
+    elif profile.role == 'provider':
+        # Get profiles (mothers) supervised by this provider
+        supervised_profiles = Profile.objects.filter(provider=profile.user, role='mother')
+        supervised_user_ids = supervised_profiles.values_list('user__id', flat=True)
+        notifications = Notifications.objects.filter(user__id__in=supervised_user_ids).order_by('-created_at')
+    elif profile.role == 'mother':
+        notifications = Notifications.objects.filter(user__id=user_id).order_by('-created_at')
+    else:
+        return JsonResponse({'error': 'Invalid role'}, status=400)
+
+    # Format notifications list
+    notifications_list = []
+    for notif in notifications:
+        notifications_list.append({
+            'id': notif.id,
+            "name": f'{notif.user.first_name} {notif.user.last_name}',
+            'title': notif.message,
+            'timestamp': notif.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'type': notif.type if hasattr(notif, 'type') else 'alert',
+            'details': notif.details if hasattr(notif, 'details') else {},
+            'read': notif.read,
+        })
+
+    return JsonResponse({'notifications': notifications_list}, status=200)
+
+#view to change user profile
+@csrf_exempt
+def profile(request):
+    user_id = request.GET.get('user_id')
+    if request.method == 'GET':
+
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id)
+                profile = Profile.objects.get(user_id=user_id)
+                
+                data = {
+                    "full_name": f'{user.first_name} {user.last_name}'.strip(),
+                    "email": user.email,
+                    "username": user.username,
+                    "phone": profile.phone_number if hasattr(profile, 'phone_number') else "",
+                }
+                return JsonResponse({'data': data}, status=200)
+            except User.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'User not found'}, status=404)
+            except Profile.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Profile not found'}, status=404)
+        else:
+            return JsonResponse({'status': 'error', 'message': 'user_id is required'}, status=400)
+
+   
+
+    try:
+        print("pass")
+        data = json.loads(request.body)
+        print("pass",data)
+        username = data.get('username')
+        phone = data.get('phone')
+        print("pass")
+
+        if not user_id:
+            return JsonResponse({'status': 'error', 'message': 'user_id is required'}, status=400)
+
+        user = User.objects.get(id=user_id)
+        
+        print("pass")
+        
+        # Update username if provided
+        if username:
+            if User.objects.exclude(pk=user.pk).filter(username=username).exists():
+                return JsonResponse({'status': 'error', 'message': 'Username already exists'}, status=400)
+            user.username = username
+            user.save()
+            
+            print("pass")
+
+        # Update phone if provided
+        if phone:
+            print("pass")
+            #get user profile
+            profile = Profile.objects.get(user = user)
+            print("pass")
+            
+            if profile:
+                profile.phone_number =  phone
+                profile.save()
+                print("profile saved")
+
+        return JsonResponse({
+            'status': 'success'
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON format'}, status=400)
+    except User.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'User not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+                
+
+# view to update user password 
+@csrf_exempt
+def change_password(request):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Only POST method allowed'}, status=405)
+    
+    try:
+        user_id = request.GET.get('user_id')
+        
+        data = json.loads(request.body)
+        current_password = data.get('currentPassword')
+        new_password = data.get('newPassword')
+
+        if not (user_id and current_password and new_password):
+            return JsonResponse({'status': 'error', 'message': 'Missing required fields'}, status=400)
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'User not found'}, status=404)
+
+        # check if current password is correct
+        if not user.check_password(current_password):
+            return JsonResponse({'status': 'error', 'message': 'Current password is incorrect'}, status=400)
+
+        # set new password
+        user.set_password(new_password)
+        user.save()
+
+        return JsonResponse({'status': 'success', 'message': 'Password updated successfully'}, status=200)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    
